@@ -11,7 +11,7 @@ lines = \str -> str |> Str.split "\n"
 main : Task {} *
 main = 
     {} <- "Part 1: \(part1)" |> Stdout.line |> Task.await
-    #{} <- "Part 2: \(part2)" |> Stdout.line |> Task.await
+    {} <- "Part 2: \(part2)" |> Stdout.line |> Task.await
     Task.ok {}
 
 part1 = solve input
@@ -41,14 +41,16 @@ parseLine = \line ->
                         drawsStr 
                             |> Str.split ";" 
                             |> List.map parseDraw
-                            |> List.keepErrs isPossible
+                            |> isPossibleGame
                             |> List.isEmpty
                     (gameId, possible)  
                 _ -> (0, Bool.false)
                           
 
+isPossibleGame = \drawList ->
+    drawList |> List.keepErrs isPossibleDraw
 
-isPossible = \draw ->
+isPossibleDraw = \draw ->
     isPossibleWithConstraint draw constraintPart1
 
 isPossibleWithConstraint = \draw, constraint ->
@@ -83,6 +85,43 @@ parseDraw = \str ->
 
 emptyDraw = {red: 0, green: 0, blue: 0}
 
+part2 = solve2 input
+
+solve2 = \str ->
+    str 
+        |> parse2
+        |> List.map power
+        |> List.sum
+        |> Num.toStr
+
+power = \{red, green, blue} -> red * green * blue        
+
+parse2 = \str ->
+    str
+        |> lines
+        |> List.map parseLine2       
+
+parseLine2 = \line ->
+    line 
+        |> Str.replaceFirst "Game " ""
+        |> Str.split ":"
+        |> \lst ->
+            when lst is 
+                [_, drawsStr] ->
+                    drawsStr 
+                        |> Str.split ";" 
+                        |> List.map parseDraw
+                        |> minimumContent
+                _ -> emptyDraw
+
+minimumContent = \drawList ->
+    drawList |> List.walk emptyDraw \state, draw ->
+        {
+            red: Num.max state.red draw.red,
+            green: Num.max state.green draw.green,
+            blue: Num.max state.blue draw.blue
+        }
+
 expect
     expected = {green : 8, blue: 6, red: 20}
     parsed = parseDraw exampleDraw
@@ -90,7 +129,7 @@ expect
 
 expect
     expected = Err "Impossible game"
-    possible = parseDraw exampleDraw |> isPossible
+    possible = parseDraw exampleDraw |> isPossibleDraw
     possible == expected    
 
 expect
@@ -113,3 +152,20 @@ example =
     """
 
 exampleDraw = "8 green, 6 blue, 20 red"
+
+
+expect 
+    expectedMinimum = [
+        {red: 4, green: 2, blue: 6},
+        {red: 1, green: 3, blue: 4},
+        {red: 20, green: 13, blue: 6},
+        {red: 14, green: 3, blue: 15},
+        {red: 6, green: 3, blue: 2},
+    ]
+    actualMinimum = parse2 example
+    expectedMinimum == actualMinimum
+
+expect
+    expectedSolve = "2286"
+    actualSolve = solve2 example
+    expectedSolve == actualSolve
